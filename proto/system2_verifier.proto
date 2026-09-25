@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package chronos.v3.system2;
+
+import "common.proto";
+import "system1_hypothesis.proto";
+
+option go_package = "chronos-v3/gen/system2;system2pb";
+
+// ChronosVerifier is System 2 (the "Chronos Engine" / "Thought Layer"):
+// the slow, deterministic ground-truth verifier. Every HypothesisCandidate
+// produced by System 1 MUST pass through Verify or BatchVerify before it
+// may cross the SCCS trust boundary.
+//
+// ZERO-HALLUCINATION LOCK: a VERIFICATION_VERDICT_GROUNDED verdict MUST
+// only be issued when the candidate was checked against a non-empty set of
+// ground_truth_refs and the resulting Huber residual is within the
+// configured tolerance. Absent that, the verdict MUST be REJECTED or
+// ESCALATED -- never GROUNDED. See services/system2_chronos_verifier/src/zero_hallucination.py.
+service ChronosVerifier {
+  rpc Verify(VerificationRequest) returns (VerificationResult);
+  rpc BatchVerify(BatchVerificationRequest) returns (BatchVerificationResult);
+}
+
+enum VerificationVerdict {
+  VERIFICATION_VERDICT_UNSPECIFIED = 0;
+  VERIFICATION_VERDICT_GROUNDED = 1;   // passed deterministic grounding checks
+  VERIFICATION_VERDICT_REJECTED = 2;   // failed grounding or contradicted ground truth
+  VERIFICATION_VERDICT_ESCALATED = 3;  // Feeling-of-Conflict too high; routed to System 0
+}
+
+message VerificationRequest {
+  chronos.v3.system1.HypothesisCandidate candidate = 1;
+  repeated string ground_truth_refs = 2;  // references into the verified knowledge store
+}
+
+message VerificationResult {
+  string candidate_id = 1;
+  VerificationVerdict verdict = 2;
+  double huber_residual = 3;  // robust M-estimation residual vs. ground truth (ALS-IRLS)
+  string rationale = 4;
+  chronos.v3.common.ContentHash merkle_leaf_hash = 5;
+  chronos.v3.common.Signature verifier_signature = 6;
+}
+
+message BatchVerificationRequest {
+  repeated VerificationRequest requests = 1;
+}
+
+message BatchVerificationResult {
+  repeated VerificationResult results = 1;
+  chronos.v3.common.ContentHash batch_merkle_root = 2;
+}

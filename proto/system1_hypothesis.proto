@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package chronos.v3.system1;
+
+import "google/protobuf/struct.proto";
+import "common.proto";
+
+option go_package = "chronos-v3/gen/system1;system1pb";
+
+// HypothesisGenerator is System 1 ("Neocortex"): the fast, associative,
+// stochastic subsystem. It proposes candidate hypotheses; it never issues
+// a final answer.
+//
+// INTERFACE BOUNDARY: implementations of this service MUST NOT expose any
+// RPC, field, or side channel that allows a HypothesisCandidate to reach a
+// caller outside the SCCS trust boundary without first passing through
+// chronos.v3.system2.ChronosVerifier/Verify. See docs/architecture/04-invariants.md#inv-1.
+service HypothesisGenerator {
+  // GenerateHypotheses returns a bounded batch of candidates for a query.
+  rpc GenerateHypotheses(HypothesisRequest) returns (HypothesisResponse);
+
+  // StreamHypotheses yields candidates as they are produced, for callers
+  // (System 2 pipelines) that verify incrementally.
+  rpc StreamHypotheses(HypothesisRequest) returns (stream HypothesisCandidate);
+}
+
+message HypothesisRequest {
+  string query = 1;
+  int32 max_candidates = 2;   // hard upper bound enforced server-side
+  double temperature = 3;     // sampling temperature, in [0, 2]
+  chronos.v3.common.Provenance provenance = 4;
+}
+
+message HypothesisCandidate {
+  string candidate_id = 1;
+  string content = 2;
+  chronos.v3.common.EpistemicState epistemic_state = 3;
+  chronos.v3.common.Provenance provenance = 4;
+  google.protobuf.Struct supporting_features = 5;  // free-form feature bag for auditability
+}
+
+message HypothesisResponse {
+  repeated HypothesisCandidate candidates = 1;
+  string batch_id = 2;
+}

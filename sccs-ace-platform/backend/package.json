@@ -1,0 +1,20 @@
+{
+  "name": "sccs-backend",
+  "version": "3.2.0",
+  "description": "SCCS Control Plane",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "pg": "^8.11.3",
+    "bullmq": "^4.12.0",
+    "ioredis": "^5.3.2",
+    "@grpc/grpc-js": "^1.9.5",
+    "@grpc/proto-loader": "^0.7.10",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
+  }
+}

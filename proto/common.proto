@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package chronos.v3.common;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "chronos-v3/gen/common;commonpb";
+
+// ContentHash is a canonical reference into the Merkle-chained audit log.
+// All hashing in SCCS uses SHA-256 over RFC 8785 (JCS) canonical JSON
+// unless otherwise noted.
+message ContentHash {
+  string algorithm = 1;  // e.g. "SHA-256"
+  bytes digest = 2;      // raw digest bytes
+}
+
+// Signature is an Ed25519 signature over the canonical (RFC 8785) encoding
+// of a message's payload. Every artifact that crosses a trust boundary in
+// SCCS (System1 -> System2, System2 -> System0, System0 -> Gateway) MUST
+// carry at least one Signature.
+message Signature {
+  string signer_id = 1;          // stable identity of the signing node/service
+  bytes public_key = 2;          // 32-byte Ed25519 public key
+  bytes signature = 3;           // 64-byte Ed25519 signature
+  ContentHash payload_hash = 4;  // hash of the canonicalized payload that was signed
+  google.protobuf.Timestamp signed_at = 5;
+}
+
+// ConfidenceBasis names which quantitative signal a downstream consumer
+// should treat as primary when interpreting an EpistemicState.
+enum ConfidenceBasis {
+  CONFIDENCE_BASIS_UNSPECIFIED = 0;
+  CONFIDENCE_BASIS_SHANNON_ENTROPY = 1;         // H(X) over the candidate distribution
+  CONFIDENCE_BASIS_DIRECTIONAL_CONSISTENCY = 2; // von Mises-Fisher concentration (kappa)
+}
+
+// EpistemicState is the quantified self-assessment System 1 must attach to
+// every hypothesis it emits. It is never trusted on its own -- it is one
+// input among several that System 2 uses to decide whether a candidate may
+// be grounded, rejected, or escalated.
+message EpistemicState {
+  double shannon_entropy_bits = 1;  // H(X) of the sampling distribution, in bits
+  double dcu_kappa = 2;             // Directional Consistency Uncertainty: vMF concentration
+  double feeling_of_rightness = 3;  // FOR, in [0,1]
+  double feeling_of_error = 4;      // FOE, in [0,1]
+  double feeling_of_conflict = 5;   // FOC, in [0,1] -- drives System 2 escalation to System 0
+  ConfidenceBasis primary_basis = 6;
+}
+
+// Provenance is the chain-of-custody envelope attached to every artifact
+// that moves between SCCS subsystems.
+message Provenance {
+  string trace_id = 1;
+  google.protobuf.Timestamp created_at = 2;
+  string origin_node_id = 3;
+  ContentHash content_hash = 4;
+  repeated Signature signatures = 5;  // append-only chain of custody
+}

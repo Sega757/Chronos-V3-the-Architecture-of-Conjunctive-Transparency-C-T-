@@ -1,0 +1,14 @@
+{
+  "registries": [
+    {
+      "domain": "sccs-cognition.ai",
+      "environment": "production",
+      "huber_delta": 1.35
+    },
+    {
+      "domain": "ace-engine.org",
+      "environment": "production",
+      "huber_delta": 1.50
+    }
+  ]
+}

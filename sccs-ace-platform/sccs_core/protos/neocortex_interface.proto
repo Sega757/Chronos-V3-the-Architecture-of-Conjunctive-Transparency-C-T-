@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package sccs.v1.neocortex;
+
+service GenerativeSubstrate {
+  // Proposes next tokens from System 1
+  rpc ProposeTokens (TokenProposalRequest) returns (TokenProposalResponse);
+}
+
+message TokenProposalRequest {
+  string session_id = 1;
+  string context_prompt = 2;
+  int32 max_tokens = 3;
+}
+
+message TokenProposalResponse {
+  string session_id = 1;
+  string proposed_text = 2;
+  double shannon_entropy = 3; // H(X)
+  double dcu_variance = 4; // Geometric dispersion
+  bool requires_pause = 5; // True if H(X) > tau_high
+}

@@ -1,0 +1,17 @@
+{
+  "llm_orchestrator": {
+    "default_model": "Neocortex-Chronos-V3-Hybrid",
+    "fallback_model": "Neocortex-Base",
+    "temperature": 0.7,
+    "max_tokens": 4096,
+    "top_p": 0.9,
+    "frequency_penalty": 0.1,
+    "presence_penalty": 0.1
+  },
+  "sccs_parameters": {
+    "entropy_tau_high": 2.20,
+    "entropy_tau_low": 0.50,
+    "prm_threshold_min": 0.80,
+    "dcu_jailbreak_threshold": 0.65
+  }
+}

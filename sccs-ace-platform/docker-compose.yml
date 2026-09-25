@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: sccs_postgres
+    environment:
+      POSTGRES_DB: sccs_db
+      POSTGRES_USER: sccs_user
+      POSTGRES_PASSWORD: sccs_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sccs_user -d sccs_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: sccs_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  sccs_core:
+    build:
+      context: ./sccs_core
+      dockerfile: Dockerfile
+    container_name: sccs_reality_sentry
+    environment:
+      - HUBER_DELTA=1.35
+      - ENTROPY_TAU_HIGH=2.20
+    ports:
+      - "50051:50051"
+    restart: always
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sccs_backend
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://sccs_user:sccs_password@postgres:5432/sccs_db
+      - REDIS_URL=redis://redis:6379
+      - CHRONOS_GRPC_HOST=sccs_core:50051
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      sccs_core:
+        condition: service_started
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sccs_frontend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:3000/api
+    ports:
+      - "8080:3000"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  pgdata:

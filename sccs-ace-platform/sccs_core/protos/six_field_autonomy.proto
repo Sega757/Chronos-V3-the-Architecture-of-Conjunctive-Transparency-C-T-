@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package sccs.v1.autonomy;
+
+service SixFieldAutonomyAuditService {
+  // Audits the state across all 6 fields (L-E-J-D-A-S)
+  rpc AuditSixFields (AuditRequest) returns (AuditResponse);
+}
+
+message AuditRequest {
+  string session_id = 1;
+  string proposed_state_json = 2;
+  double entropy_hx = 3;
+  double prm_score = 4;
+  double dcu_variance = 5;
+  double huber_residual = 6;
+  double projected_info_gain = 7; // Delta H
+  double carbon_cost = 8;
+}
+
+message AuditResponse {
+  string session_id = 1;
+  bool passed_all = 2;
+
+  enum FieldStatus {
+    PASSED = 0;
+    FAILED_SEMANTIC_STABILITY = 1; // Field 1: Logic
+    FAILED_DATA_STERILITY = 2; // Field 2: Ethics/Sterility
+    FAILED_STRUCTURAL_ALIGNMENT = 3; // Field 3: Law/Alignment
+    FAILED_RESOURCE_EFFICIENCY = 4; // Field 4: Econ/Efficiency
+    FAILED_SOVEREIGN_SECURITY = 5; // Field 5: Autonomy/Security
+    FAILED_ECOLOGICAL_BALANCE = 6; // Field 6: Vulnerability/Ecological
+  }
+
+  FieldStatus status = 3;
+  string error_message = 4;
+}

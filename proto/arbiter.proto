@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package chronos.v3.arbiter;
+
+import "common.proto";
+import "system2_verifier.proto";
+
+option go_package = "chronos-v3/gen/arbiter;arbiterpb";
+
+// MetaArbiter is System 0: the meta-governance layer. It resolves
+// escalations raised by System 2 (high Feeling-of-Conflict) through
+// Proof-of-Sampling (PoSP) consensus among registered arbiter nodes, and
+// enforces the L-E-J-D-A-S governance schema, including collateral
+// slashing for bad-faith arbitration.
+service MetaArbiter {
+  // Escalate opens (or joins) a consensus round for a contested result.
+  rpc Escalate(EscalationRequest) returns (ArbitrationDecision);
+
+  // SubmitSample records one arbiter node's signed vote + staked collateral
+  // for an open consensus round.
+  rpc SubmitSample(ConsensusSample) returns (SampleAck);
+
+  // GetGovernanceAction looks up the current L-E-J-D-A-S governance record
+  // for a subject (a node, a service, or a policy).
+  rpc GetGovernanceAction(GovernanceQuery) returns (GovernanceAction);
+}
+
+message EscalationRequest {
+  chronos.v3.system2.VerificationResult contested_result = 1;
+  string escalation_reason = 2;
+}
+
+message ConsensusSample {
+  string round_id = 1;
+  string arbiter_node_id = 2;
+  bool vote_grounded = 3;
+  double stake_collateral = 4;
+  chronos.v3.common.Signature signature = 5;
+}
+
+message SampleAck {
+  string round_id = 1;
+  bool accepted = 2;
+}
+
+enum ArbitrationOutcome {
+  ARBITRATION_OUTCOME_UNSPECIFIED = 0;
+  ARBITRATION_OUTCOME_UPHELD = 1;      // System 2's verdict is confirmed
+  ARBITRATION_OUTCOME_OVERTURNED = 2;  // System 2's verdict is reversed
+  ARBITRATION_OUTCOME_DEADLOCKED = 3;  // no Nash equilibrium reached; escalate to a human
+}
+
+message ArbitrationDecision {
+  string round_id = 1;
+  ArbitrationOutcome outcome = 2;
+  double nash_equilibrium_score = 3;
+  repeated string slashed_node_ids = 4;
+  chronos.v3.common.ContentHash decision_merkle_hash = 5;
+}
+
+// L-E-J-D-A-S governance schema:
+//   Legitimacy    -- by what authority the action is taken
+//   Efficacy      -- the measurable outcome it is judged against
+//   Justification -- the recorded rationale
+//   Distribution  -- who/what the action's effects apply to
+//   Accountability-- who is answerable for it
+//   Sanction      -- the consequence if it is violated
+message GovernanceQuery {
+  string subject_id = 1;
+}
+
+message GovernanceAction {
+  string subject_id = 1;
+  string legitimacy_basis = 2;
+  string efficacy_metric = 3;
+  string justification = 4;
+  string distribution_policy = 5;
+  string accountable_party = 6;
+  string sanction = 7;
+}

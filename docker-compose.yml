@@ -1,0 +1,79 @@
+name: chronos-v3
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: chronos
+      POSTGRES_PASSWORD: chronos
+      POSTGRES_DB: chronos_v3
+    ports:
+      - "5432:5432"
+    volumes:
+      - chronos-postgres-data:/var/lib/postgresql/data
+      - ./db/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chronos -d chronos_v3"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  system1-hypothesis-generator:
+    build:
+      context: .
+      dockerfile: services/system1_hypothesis_generator/Dockerfile
+    environment:
+      NODE_ID: system1-hypothesis-generator
+      GRPC_PORT: "50051"
+      LOG_LEVEL: INFO
+    ports:
+      - "50051:50051"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  system2-chronos-verifier:
+    build:
+      context: .
+      dockerfile: services/system2_chronos_verifier/Dockerfile
+    environment:
+      NODE_ID: system2-chronos-verifier
+      GRPC_PORT: "50052"
+      LOG_LEVEL: INFO
+    ports:
+      - "50052:50052"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      system1-hypothesis-generator:
+        condition: service_started
+
+  arbiter-module:
+    build:
+      context: .
+      dockerfile: services/arbiter_module/Dockerfile
+    environment:
+      NODE_ID: arbiter-module-0
+      GRPC_PORT: "50053"
+      ESCALATION_TIMEOUT_SECONDS: "5.0"
+      LOG_LEVEL: INFO
+    ports:
+      - "50053:50053"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      system2-chronos-verifier:
+        condition: service_started
+
+volumes:
+  chronos-postgres-data:

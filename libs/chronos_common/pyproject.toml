@@ -1,0 +1,24 @@
+[project]
+name = "chronos-common"
+version = "0.1.0"
+description = "Shared primitives for the SCCS / Chronos V3 services: canonical JSON, Merkle hashing, Ed25519 signing, and epistemic-state math."
+requires-python = ">=3.11"
+dependencies = [
+    "cryptography>=42.0",
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+codegen = [
+    "grpcio-tools>=1.62",
+]
+dev = [
+    "pytest>=8.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["chronos_common*"]

@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package sccs.v1.chronos;
+
+service RealityFilter {
+  // Queries external data, bypassing probabilistic models
+  rpc IngestTelemetry (TelemetryRequest) returns (TelemetryResponse);
+
+  // Applies Huber loss and returns a signed Knowledge Object
+  rpc SterilizeAndAlign (SterilizationRequest) returns (KnowledgeObject);
+}
+
+message TelemetryRequest {
+  string session_id = 1;
+  string query_target = 2; // e.g., "market_ticks", "sensor_array"
+}
+
+message TelemetryResponse {
+  string session_id = 1;
+  repeated double raw_values = 2;
+  bool signal_absent = 3;
+}
+
+message SterilizationRequest {
+  string session_id = 1;
+  repeated double raw_values = 2;
+  double huber_delta = 3;
+}
+
+message KnowledgeObject {
+  string object_id = 1;
+  int64 timestamp_utc_ms = 2;
+  string rfc8785_canonical_json = 3;
+  double huber_residual_delta = 4;
+  bool signal_present = 5;
+  bytes ed25519_signature = 6;
+  string merkle_root_hash = 7;
+}

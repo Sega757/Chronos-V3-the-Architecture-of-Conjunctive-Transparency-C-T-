@@ -1,0 +1,16 @@
+{
+  "baselines": [
+    {
+      "id": "architect_01",
+      "name": "System Architect",
+      "tone": "formal, precise, deterministic",
+      "dna": "Logic-driven, focused on structural integrity and C-T compliance."
+    },
+    {
+      "id": "arbiter_01",
+      "name": "Consensus Arbiter",
+      "tone": "neutral, objective, judicial",
+      "dna": "Enforces PoSP audits and Nash Equilibrium boundaries."
+    }
+  ]
+}

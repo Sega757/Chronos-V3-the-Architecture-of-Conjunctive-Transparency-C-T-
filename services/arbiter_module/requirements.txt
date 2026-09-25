@@ -1,0 +1,8 @@
+grpcio>=1.62
+grpcio-tools>=1.62
+cryptography>=42.0
+# NOTE: pip resolves a relative editable path against its own CWD, not
+# against this file's location -- so this path is relative to the repo
+# root and must be installed with the repo root as CWD (as the
+# Dockerfile and CI do), not from within this directory.
+-e libs/chronos_common
