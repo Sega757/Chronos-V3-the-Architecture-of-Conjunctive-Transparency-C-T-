@@ -60,7 +60,7 @@ def als_irls_estimate(
     if not reference_embeddings:
         raise ValueError("als_irls_estimate: at least one reference embedding is required")
 
-    refs = np.stack(reference_embeddings)
+    refs = np.asarray(reference_embeddings)
     mu = refs.mean(axis=0)
     sigma = 1.0
 
@@ -68,14 +68,17 @@ def als_irls_estimate(
     iterations = 0
     for iterations in range(1, max_iterations + 1):
         distances = np.linalg.norm(refs - mu, axis=1) / max(sigma, _EPS)
-        weights = np.array([_huber_weight(d, delta) for d in distances])
-        weight_sum = weights.sum()
+        # Vectorized Huber weight calculation to avoid Python loops & allocation overhead
+        weights = np.minimum(1.0, delta / np.maximum(distances, _EPS))
+        weight_sum = float(weights.sum())
         if weight_sum < _EPS:
             break
-        new_mu = (weights[:, None] * refs).sum(axis=0) / weight_sum
+        # BLAS matrix-vector product np.dot(weights, refs) instead of elementwise broadcasting & sum
+        new_mu = np.dot(weights, refs) / weight_sum
 
         residual_norms = np.linalg.norm(refs - new_mu, axis=1)
-        mad = np.median(np.abs(residual_norms - np.median(residual_norms)))
+        med = np.median(residual_norms)
+        mad = np.median(np.abs(residual_norms - med))
         new_sigma = max(1.4826 * mad, _EPS)  # 1.4826 makes MAD consistent for a Gaussian
 
         shift = np.linalg.norm(new_mu - mu)
