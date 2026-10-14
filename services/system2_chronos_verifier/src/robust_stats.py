@@ -68,24 +68,27 @@ def als_irls_estimate(
     iterations = 0
     for iterations in range(1, max_iterations + 1):
         distances = np.linalg.norm(refs - mu, axis=1) / max(sigma, _EPS)
-        weights = np.array([_huber_weight(d, delta) for d in distances])
-        weight_sum = weights.sum()
+        # Vectorized Huber weight calculation: replaces Python loop over distances.
+        # np.maximum(distances, _EPS) prevents divide-by-zero warnings during
+        # evaluation of the false branch in np.where.
+        weights = np.where(distances <= delta, 1.0, delta / np.maximum(distances, _EPS))
+        weight_sum = float(weights.sum())
         if weight_sum < _EPS:
             break
         new_mu = (weights[:, None] * refs).sum(axis=0) / weight_sum
 
         residual_norms = np.linalg.norm(refs - new_mu, axis=1)
-        mad = np.median(np.abs(residual_norms - np.median(residual_norms)))
+        mad = float(np.median(np.abs(residual_norms - np.median(residual_norms))))
         new_sigma = max(1.4826 * mad, _EPS)  # 1.4826 makes MAD consistent for a Gaussian
 
-        shift = np.linalg.norm(new_mu - mu)
+        shift = float(np.linalg.norm(new_mu - mu))
         scale_shift = abs(new_sigma - sigma)
         mu, sigma = new_mu, new_sigma
         if shift < tolerance and scale_shift < tolerance:
             converged = True
             break
 
-    return RobustEstimate(location=mu, scale=sigma, iterations=iterations, converged=converged)
+    return RobustEstimate(location=mu, scale=float(sigma), iterations=iterations, converged=converged)
 
 
 def candidate_huber_residual(

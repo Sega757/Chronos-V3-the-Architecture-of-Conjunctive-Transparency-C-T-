@@ -1,0 +1,8 @@
+cryptography>=42.0
+numpy>=1.26
+
+[codegen]
+grpcio-tools>=1.62
+
+[dev]
+pytest>=8.0

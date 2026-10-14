@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: chronos-common
+Version: 0.1.0
+Summary: Shared primitives for the SCCS / Chronos V3 services: canonical JSON, Merkle hashing, Ed25519 signing, and epistemic-state math.
+Requires-Python: >=3.11
+Requires-Dist: cryptography>=42.0
+Requires-Dist: numpy>=1.26
+Provides-Extra: codegen
+Requires-Dist: grpcio-tools>=1.62; extra == "codegen"
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
