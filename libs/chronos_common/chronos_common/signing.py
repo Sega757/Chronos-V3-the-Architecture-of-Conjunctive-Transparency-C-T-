@@ -64,9 +64,9 @@ def verify_signature(payload: Any, public_key: bytes, signature: bytes) -> bool:
     """Verify that ``signature`` is a valid Ed25519 signature by the holder
     of ``public_key`` over the SHA-256 digest of ``payload``'s canonical
     JSON encoding. Never raises for a bad signature -- returns False."""
-    digest = hashlib.sha256(canonicalize(payload)).digest()
     try:
+        digest = hashlib.sha256(canonicalize(payload)).digest()
         Ed25519PublicKey.from_public_bytes(public_key).verify(signature, digest)
         return True
-    except InvalidSignature:
+    except (InvalidSignature, ValueError, TypeError):
         return False
