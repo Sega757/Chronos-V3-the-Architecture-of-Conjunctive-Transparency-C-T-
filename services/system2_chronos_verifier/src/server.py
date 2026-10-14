@@ -16,7 +16,7 @@ import grpc
 import numpy as np
 
 from chronos_common.merkle import merkle_root
-from chronos_common.signing import Ed25519Signer, KeyPair
+from chronos_common.signing import Ed25519Signer, KeyPair, verify_signature
 
 from src.exceptions import GroundTruthUnavailableError, InvalidRequestError, SigningError
 from src.ground_truth import GroundTruthStore, InMemoryGroundTruthStore
@@ -88,6 +88,22 @@ class ChronosVerifierServicer(system2_verifier_pb2_grpc.ChronosVerifierServicer)
         candidate = request.candidate
         if not candidate.candidate_id:
             raise InvalidRequestError("candidate.candidate_id must be set")
+
+        if candidate.provenance and candidate.provenance.signatures:
+            sig = candidate.provenance.signatures[0]
+            payload = {
+                "candidate_id": candidate.candidate_id,
+                "content": candidate.content,
+                "epistemic_state": {
+                    "shannon_entropy_bits": candidate.epistemic_state.shannon_entropy_bits,
+                    "dcu_kappa": candidate.epistemic_state.dcu_kappa,
+                    "feeling_of_rightness": candidate.epistemic_state.feeling_of_rightness,
+                    "feeling_of_error": candidate.epistemic_state.feeling_of_error,
+                    "feeling_of_conflict": candidate.epistemic_state.feeling_of_conflict,
+                },
+            }
+            if not verify_signature(payload, sig.public_key, sig.signature):
+                raise InvalidRequestError("invalid candidate signature")
 
         candidate_embedding = self._extract_embedding(candidate)
         huber_residual = None
