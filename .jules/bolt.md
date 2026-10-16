@@ -5,3 +5,7 @@
 ## 2026-03-31 - Fast JSON string escaping in Python
 **Learning:** Standard library `json.dumps(value, ensure_ascii=False)` in C is ~6x faster than a Python loop iterating over characters with a lookup dictionary and array appends for RFC 8785 JSON string escaping.
 **Action:** Use `json.dumps(s, ensure_ascii=False)` when canonicalizing strings in Python rather than manual character iteration loops.
+
+## 2026-03-31 - Vectorized RNG sampling in NumPy default_rng
+**Learning:** `rng.normal(size=(N, DIM))` produces the exact same PRNG sequence as looping `rng.normal(size=DIM)` N times in NumPy `default_rng`, but runs ~1.5x faster due to reduced call overhead and contiguous C allocation.
+**Action:** Prefer batch shape tuple arguments over looped single-sample calls when generating reproducible multi-dimensional random arrays.
