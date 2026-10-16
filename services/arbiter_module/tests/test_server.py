@@ -106,3 +106,22 @@ def test_submit_sample_invalid_signature():
 
     assert ctx.code == grpc.StatusCode.INVALID_ARGUMENT
     assert "invalid sample signature" in ctx.details
+
+
+def test_submit_sample_missing_signature():
+    servicer, engine = _create_servicer()
+    engine.open_round("round-1", "cand-1", contested_grounded=True, escalation_reason="test")
+
+    sample_request = arbiter_pb2.ConsensusSample(
+        round_id="round-1",
+        arbiter_node_id="node-1",
+        vote_grounded=True,
+        stake_collateral=10.0,
+    )
+
+    ctx = MockContext()
+    with pytest.raises(grpc.RpcError):
+        servicer.SubmitSample(sample_request, ctx)
+
+    assert ctx.code == grpc.StatusCode.INVALID_ARGUMENT
+    assert "sample signature is required" in ctx.details

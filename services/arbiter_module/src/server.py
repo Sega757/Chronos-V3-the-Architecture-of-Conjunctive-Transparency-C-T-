@@ -106,15 +106,17 @@ class MetaArbiterServicer(arbiter_pb2_grpc.MetaArbiterServicer):
         if request.stake_collateral <= 0:
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, "stake_collateral must be > 0")
 
-        if request.HasField("signature") and request.signature.signature:
-            payload = {
-                "round_id": request.round_id,
-                "arbiter_node_id": request.arbiter_node_id,
-                "vote_grounded": request.vote_grounded,
-                "stake_collateral": request.stake_collateral,
-            }
-            if not verify_signature(payload, request.signature.public_key, request.signature.signature):
-                context.abort(grpc.StatusCode.INVALID_ARGUMENT, "invalid sample signature")
+        if not request.HasField("signature") or not request.signature.signature:
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, "sample signature is required")
+
+        payload = {
+            "round_id": request.round_id,
+            "arbiter_node_id": request.arbiter_node_id,
+            "vote_grounded": request.vote_grounded,
+            "stake_collateral": request.stake_collateral,
+        }
+        if not verify_signature(payload, request.signature.public_key, request.signature.signature):
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, "invalid sample signature")
 
         try:
             self._engine.submit_sample(
