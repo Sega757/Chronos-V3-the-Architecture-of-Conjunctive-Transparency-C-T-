@@ -9,3 +9,7 @@
 ## 2026-03-31 - Vectorized RNG sampling in NumPy default_rng
 **Learning:** `rng.normal(size=(N, DIM))` produces the exact same PRNG sequence as looping `rng.normal(size=DIM)` N times in NumPy `default_rng`, but runs ~1.5x faster due to reduced call overhead and contiguous C allocation.
 **Action:** Prefer batch shape tuple arguments over looped single-sample calls when generating reproducible multi-dimensional random arrays.
+
+## 2026-03-31 - Batch epistemic state derivation in System 1
+**Learning:** Batching candidate embeddings into a single 2D array and precomputing distribution entropy with `math.log2(N)` yields ~5.75x speedup over calling `EpistemicState.derive` repeatedly in a candidate loop.
+**Action:** Vectorize multi-candidate epistemic state derivations across candidate batches rather than computing single-row array slices in per-item loops.

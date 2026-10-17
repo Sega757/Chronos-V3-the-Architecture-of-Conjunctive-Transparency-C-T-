@@ -13,12 +13,13 @@ import logging
 import os
 import uuid
 from concurrent import futures
+import math
 from datetime import datetime, timezone
 
 import grpc
+import numpy as np
 
 from chronos_common import EpistemicState as EpistemicMath
-from chronos_common.epistemics import shannon_entropy, vmf_concentration
 from chronos_common.signing import Ed25519Signer, KeyPair
 
 from src.exceptions import GenerationBackendError, InvalidRequestError, SigningError
@@ -97,16 +98,23 @@ class HypothesisGeneratorServicer(system1_hypothesis_pb2_grpc.HypothesisGenerato
         except Exception as exc:  # noqa: BLE001 - backend is untrusted, never let it crash the server
             raise GenerationBackendError(f"generation backend failed: {exc}") from exc
 
+        if not raw_candidates:
+            return []
+
         probabilities = [c.probability for c in raw_candidates]
-        max_expected_entropy = shannon_entropy([1.0] * len(raw_candidates)) if raw_candidates else 1.0
+        # Optimization: Precompute maximum expected entropy using log2(N) and batch-derive
+        # epistemic state across all candidate embeddings once per request.
+        num_candidates = len(raw_candidates)
+        max_expected_entropy = math.log2(num_candidates)
+        all_embeddings = np.vstack([c.embedding for c in raw_candidates])
+        state = EpistemicMath.derive(
+            candidate_probabilities=probabilities,
+            candidate_embeddings=all_embeddings,
+            max_expected_entropy_bits=max(max_expected_entropy, 1e-6),
+        )
 
         results = []
         for i, raw in enumerate(raw_candidates):
-            state = EpistemicMath.derive(
-                candidate_probabilities=probabilities,
-                candidate_embeddings=raw.embedding.reshape(1, -1),
-                max_expected_entropy_bits=max(max_expected_entropy, 1e-6),
-            )
             candidate_id = f"{request.query[:16]}-{i}-{uuid.uuid4().hex[:8]}"
 
             payload = {
