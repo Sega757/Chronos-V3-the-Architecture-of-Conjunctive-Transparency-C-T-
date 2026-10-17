@@ -28,6 +28,7 @@ try:
     # directory is added directly to PYTHONPATH (see Dockerfile / Makefile),
     # not as a dotted `chronos_common.generated` subpackage.
     import common_pb2
+    import system2_verifier_pb2
     import arbiter_pb2
     import arbiter_pb2_grpc
 except ImportError as exc:  # pragma: no cover
@@ -42,6 +43,12 @@ _OUTCOME_TO_PROTO = {
     Outcome.UPHELD: arbiter_pb2.ARBITRATION_OUTCOME_UPHELD,
     Outcome.OVERTURNED: arbiter_pb2.ARBITRATION_OUTCOME_OVERTURNED,
     Outcome.DEADLOCKED: arbiter_pb2.ARBITRATION_OUTCOME_DEADLOCKED,
+}
+
+_VERDICT_PROTO_TO_STR = {
+    system2_verifier_pb2.VERIFICATION_VERDICT_GROUNDED: "GROUNDED",
+    system2_verifier_pb2.VERIFICATION_VERDICT_REJECTED: "REJECTED",
+    system2_verifier_pb2.VERIFICATION_VERDICT_ESCALATED: "ESCALATED",
 }
 
 
@@ -64,6 +71,19 @@ class MetaArbiterServicer(arbiter_pb2_grpc.MetaArbiterServicer):
         contested = request.contested_result
         if not contested.candidate_id:
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, "contested_result.candidate_id must be set")
+
+        if not contested.HasField("verifier_signature") or not contested.verifier_signature.signature:
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, "contested_result verifier signature is required")
+
+        verdict_str = _VERDICT_PROTO_TO_STR.get(contested.verdict, "")
+        payload = {
+            "candidate_id": contested.candidate_id,
+            "verdict": verdict_str,
+            "huber_residual": contested.huber_residual,
+            "rationale": contested.rationale,
+        }
+        if not verify_signature(payload, contested.verifier_signature.public_key, contested.verifier_signature.signature):
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, "invalid verifier signature on contested_result")
 
         round_id = str(uuid.uuid4())
         contested_grounded = contested.verdict == 1  # VERIFICATION_VERDICT_GROUNDED == 1 (see system2_verifier.proto)

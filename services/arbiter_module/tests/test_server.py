@@ -12,6 +12,7 @@ if str(gen_dir) not in sys.path:
 
 import arbiter_pb2
 import common_pb2
+import system2_verifier_pb2
 import grpc
 from chronos_common.signing import Ed25519Signer, KeyPair
 from src.governance import GovernanceRegistry
@@ -19,12 +20,12 @@ from src.posp_consensus import ConsensusEngine
 from src.server import MetaArbiterServicer
 
 
-def _create_servicer():
+def _create_servicer(timeout_seconds: float = 5.0):
     engine = ConsensusEngine()
     governance = GovernanceRegistry()
     keypair = KeyPair.generate("arbiter-node")
     signer = Ed25519Signer(keypair)
-    servicer = MetaArbiterServicer(engine, governance, signer, "arbiter-node")
+    servicer = MetaArbiterServicer(engine, governance, signer, "arbiter-node", escalation_timeout_seconds=timeout_seconds)
     return servicer, engine
 
 
@@ -125,3 +126,103 @@ def test_submit_sample_missing_signature():
 
     assert ctx.code == grpc.StatusCode.INVALID_ARGUMENT
     assert "sample signature is required" in ctx.details
+
+
+def test_escalate_valid_signature():
+    servicer, _ = _create_servicer(timeout_seconds=0.01)
+
+    verifier_keypair = KeyPair.generate("verifier-node")
+    signer = Ed25519Signer(verifier_keypair)
+    payload = {
+        "candidate_id": "cand-123",
+        "verdict": "ESCALATED",
+        "huber_residual": 1.2,
+        "rationale": "High Feeling-of-Conflict",
+    }
+    signed = signer.sign(payload)
+
+    contested = system2_verifier_pb2.VerificationResult(
+        candidate_id="cand-123",
+        verdict=system2_verifier_pb2.VERIFICATION_VERDICT_ESCALATED,
+        huber_residual=1.2,
+        rationale="High Feeling-of-Conflict",
+        verifier_signature=common_pb2.Signature(
+            signer_id=signed.signer_id,
+            public_key=signed.public_key,
+            signature=signed.signature,
+        ),
+    )
+
+    request = arbiter_pb2.EscalationRequest(
+        contested_result=contested,
+        escalation_reason="high conflict",
+    )
+
+    ctx = MockContext()
+    decision = servicer.Escalate(request, ctx)
+    assert decision.round_id is not None
+    assert decision.outcome == arbiter_pb2.ARBITRATION_OUTCOME_DEADLOCKED
+
+
+def test_escalate_invalid_signature():
+    servicer, _ = _create_servicer(timeout_seconds=0.01)
+
+    verifier_keypair = KeyPair.generate("verifier-node")
+    signer = Ed25519Signer(verifier_keypair)
+    payload = {
+        "candidate_id": "cand-123",
+        "verdict": "ESCALATED",
+        "huber_residual": 1.2,
+        "rationale": "High Feeling-of-Conflict",
+    }
+    signed = signer.sign(payload)
+
+    bad_sig = bytearray(signed.signature)
+    bad_sig[0] ^= 0xFF
+
+    contested = system2_verifier_pb2.VerificationResult(
+        candidate_id="cand-123",
+        verdict=system2_verifier_pb2.VERIFICATION_VERDICT_ESCALATED,
+        huber_residual=1.2,
+        rationale="High Feeling-of-Conflict",
+        verifier_signature=common_pb2.Signature(
+            signer_id=signed.signer_id,
+            public_key=signed.public_key,
+            signature=bytes(bad_sig),
+        ),
+    )
+
+    request = arbiter_pb2.EscalationRequest(
+        contested_result=contested,
+        escalation_reason="high conflict",
+    )
+
+    ctx = MockContext()
+    with pytest.raises(grpc.RpcError):
+        servicer.Escalate(request, ctx)
+
+    assert ctx.code == grpc.StatusCode.INVALID_ARGUMENT
+    assert "invalid verifier signature on contested_result" in ctx.details
+
+
+def test_escalate_missing_signature():
+    servicer, _ = _create_servicer(timeout_seconds=0.01)
+
+    contested = system2_verifier_pb2.VerificationResult(
+        candidate_id="cand-123",
+        verdict=system2_verifier_pb2.VERIFICATION_VERDICT_ESCALATED,
+        huber_residual=1.2,
+        rationale="High Feeling-of-Conflict",
+    )
+
+    request = arbiter_pb2.EscalationRequest(
+        contested_result=contested,
+        escalation_reason="high conflict",
+    )
+
+    ctx = MockContext()
+    with pytest.raises(grpc.RpcError):
+        servicer.Escalate(request, ctx)
+
+    assert ctx.code == grpc.StatusCode.INVALID_ARGUMENT
+    assert "contested_result verifier signature is required" in ctx.details
