@@ -13,3 +13,7 @@
 ## 2026-03-31 - Batch epistemic state derivation in System 1
 **Learning:** Batching candidate embeddings into a single 2D array and precomputing distribution entropy with `math.log2(N)` yields ~5.75x speedup over calling `EpistemicState.derive` repeatedly in a candidate loop.
 **Action:** Vectorize multi-candidate epistemic state derivations across candidate batches rather than computing single-row array slices in per-item loops.
+
+## 2026-03-31 - Reusing residual norms across ALS-IRLS iterations
+**Learning:** In iterative location/scale estimation, precomputing initial residual norms and reusing `residual_norms` from step k in step k+1 avoids recomputing `np.linalg.norm(refs - mu, axis=1)` from scratch every iteration, yielding a ~14%-33% speedup.
+**Action:** Check iterative optimization loops for state that was already computed at the end of the previous iteration before recalculating it from scratch.
