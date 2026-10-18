@@ -66,8 +66,13 @@ def als_irls_estimate(
 
     converged = False
     iterations = 0
+    # Optimization: Pre-compute initial residual norms from starting mu.
+    # Reusing residual_norms across iterations eliminates redundant matrix
+    # subtraction (refs - mu) and row-wise norm calculations in the loop.
+    residual_norms = np.linalg.norm(refs - mu, axis=1)
+
     for iterations in range(1, max_iterations + 1):
-        distances = np.linalg.norm(refs - mu, axis=1) / max(sigma, _EPS)
+        distances = residual_norms / max(sigma, _EPS)
         # Vectorized Huber weight calculation to avoid Python loops & allocation overhead
         weights = np.minimum(1.0, delta / np.maximum(distances, _EPS))
         weight_sum = float(weights.sum())
@@ -76,6 +81,7 @@ def als_irls_estimate(
         # BLAS matrix-vector product np.dot(weights, refs) instead of elementwise broadcasting & sum
         new_mu = np.dot(weights, refs) / weight_sum
 
+        # Compute residual_norms for new_mu; this is reused as distances at top of next iteration
         residual_norms = np.linalg.norm(refs - new_mu, axis=1)
         med = np.median(residual_norms)
         mad = np.median(np.abs(residual_norms - med))
