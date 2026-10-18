@@ -14,3 +14,8 @@
 **Vulnerability:** System 0 (MetaArbiter) received `EscalationRequest` containing a `contested_result` (`VerificationResult`) and opened consensus rounds without verifying the attached `verifier_signature`.
 **Learning:** Accepting inter-service escalation requests without boundary signature verification allows unauthenticated or malformed inputs to trigger PoSP consensus rounds and arbitrary stake slashing.
 **Prevention:** Verify `contested_result.verifier_signature` against canonical `VerificationResult` fields at the gRPC service boundary in `Escalate`.
+
+## 2026-10-17 - Mandatory Boundary Signature Enforcement
+**Vulnerability:** System 2 verified candidate signatures conditionally if `provenance.signatures` was present, allowing unsigned candidates to bypass authentication entirely by omitting provenance.
+**Learning:** Conditional signature checks (`if signature: verify()`) introduce an authentication bypass vulnerability when signature presence itself is not required.
+**Prevention:** Always require signature presence at trust boundaries (`if not signature: raise Error`) before validating the signature payload.
