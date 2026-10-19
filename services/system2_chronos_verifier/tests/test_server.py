@@ -146,5 +146,5 @@ def test_verify_one_unsigned_candidate():
         ground_truth_refs=["ref-1"],
     )
 
-    result = servicer._verify_one(request)
-    assert result.candidate_id == "unsigned-1"
+    with pytest.raises(InvalidRequestError, match="candidate signature is required"):
+        servicer._verify_one(request)
