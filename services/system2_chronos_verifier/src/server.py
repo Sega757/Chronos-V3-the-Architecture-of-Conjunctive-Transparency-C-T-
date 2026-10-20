@@ -39,6 +39,8 @@ except ImportError as exc:  # pragma: no cover
 
 logger = logging.getLogger("system2.server")
 
+MAX_BATCH_SIZE = 128
+
 _VERDICT_TO_PROTO = {
     Verdict.GROUNDED: system2_verifier_pb2.VERIFICATION_VERDICT_GROUNDED,
     Verdict.REJECTED: system2_verifier_pb2.VERIFICATION_VERDICT_REJECTED,
@@ -64,6 +66,8 @@ class ChronosVerifierServicer(system2_verifier_pb2_grpc.ChronosVerifierServicer)
     def BatchVerify(self, request, context):
         if not request.requests:
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, "at least one VerificationRequest is required")
+        if len(request.requests) > MAX_BATCH_SIZE:
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"batch size exceeds maximum limit of {MAX_BATCH_SIZE}")
 
         results = []
         for req in request.requests:

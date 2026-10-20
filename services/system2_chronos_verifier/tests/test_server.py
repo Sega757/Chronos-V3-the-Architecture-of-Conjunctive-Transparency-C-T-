@@ -148,3 +148,58 @@ def test_verify_one_unsigned_candidate():
 
     with pytest.raises(InvalidRequestError, match="candidate signature is required"):
         servicer._verify_one(request)
+
+
+def test_batch_verify_invalid_signature():
+    keypair = KeyPair.generate("system1-node")
+    verifier_keypair = KeyPair.generate("system2-node")
+    servicer = ChronosVerifierServicer(
+        store=InMemoryGroundTruthStore(),
+        signer=Ed25519Signer(verifier_keypair),
+        node_id="system2-node",
+    )
+
+    candidate1 = _create_signed_candidate(keypair, candidate_id="cand-1")
+    candidate2 = _create_signed_candidate(keypair, candidate_id="cand-2")
+
+    # Corrupt signature on candidate2
+    bad_sig = bytearray(candidate2.provenance.signatures[0].signature)
+    bad_sig[0] ^= 0xFF
+    candidate2.provenance.signatures[0].signature = bytes(bad_sig)
+
+    batch_request = system2_verifier_pb2.BatchVerificationRequest(
+        requests=[
+            system2_verifier_pb2.VerificationRequest(candidate=candidate1),
+            system2_verifier_pb2.VerificationRequest(candidate=candidate2),
+        ]
+    )
+
+    # Simulated context for BatchVerify
+    class MockContext:
+        def abort(self, code, details):
+            raise InvalidRequestError(details)
+
+    with pytest.raises(InvalidRequestError, match="invalid candidate signature"):
+        servicer.BatchVerify(batch_request, MockContext())
+
+
+def test_batch_verify_exceeds_max_batch_size():
+    keypair = KeyPair.generate("system1-node")
+    verifier_keypair = KeyPair.generate("system2-node")
+    servicer = ChronosVerifierServicer(
+        store=InMemoryGroundTruthStore(),
+        signer=Ed25519Signer(verifier_keypair),
+        node_id="system2-node",
+    )
+
+    candidate = _create_signed_candidate(keypair, candidate_id="cand-1")
+    requests = [system2_verifier_pb2.VerificationRequest(candidate=candidate)] * 129
+
+    batch_request = system2_verifier_pb2.BatchVerificationRequest(requests=requests)
+
+    class MockContext:
+        def abort(self, code, details):
+            raise InvalidRequestError(details)
+
+    with pytest.raises(InvalidRequestError, match="batch size exceeds maximum limit of 128"):
+        servicer.BatchVerify(batch_request, MockContext())
