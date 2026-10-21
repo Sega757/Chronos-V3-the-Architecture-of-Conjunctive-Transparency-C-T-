@@ -226,3 +226,33 @@ def test_escalate_missing_signature():
 
     assert ctx.code == grpc.StatusCode.INVALID_ARGUMENT
     assert "contested_result verifier signature is required" in ctx.details
+
+
+def test_get_governance_action_valid_subject():
+    servicer, _ = _create_servicer()
+    req = arbiter_pb2.GovernanceQuery(subject_id="node-123")
+    ctx = MockContext()
+    action = servicer.GetGovernanceAction(req, ctx)
+    assert action.subject_id == "node-123"
+
+
+def test_get_governance_action_empty_subject():
+    servicer, _ = _create_servicer()
+    req = arbiter_pb2.GovernanceQuery(subject_id="")
+    ctx = MockContext()
+    with pytest.raises(grpc.RpcError):
+        servicer.GetGovernanceAction(req, ctx)
+
+    assert ctx.code == grpc.StatusCode.INVALID_ARGUMENT
+    assert "subject_id must be non-empty" in ctx.details
+
+
+def test_get_governance_action_whitespace_subject():
+    servicer, _ = _create_servicer()
+    req = arbiter_pb2.GovernanceQuery(subject_id="   ")
+    ctx = MockContext()
+    with pytest.raises(grpc.RpcError):
+        servicer.GetGovernanceAction(req, ctx)
+
+    assert ctx.code == grpc.StatusCode.INVALID_ARGUMENT
+    assert "subject_id must be non-empty" in ctx.details
