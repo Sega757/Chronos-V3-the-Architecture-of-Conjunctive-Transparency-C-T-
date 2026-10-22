@@ -155,9 +155,10 @@ class MetaArbiterServicer(arbiter_pb2_grpc.MetaArbiterServicer):
         return arbiter_pb2.SampleAck(round_id=request.round_id, accepted=True)
 
     def GetGovernanceAction(self, request, context):
-        if not request.subject_id:
-            context.abort(grpc.StatusCode.INVALID_ARGUMENT, "subject_id must be set")
-        action = self._governance.get(request.subject_id)
+        subject_id = request.subject_id.strip() if request.subject_id else ""
+        if not subject_id:
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, "subject_id must be non-empty")
+        action = self._governance.get(subject_id)
         return arbiter_pb2.GovernanceAction(
             subject_id=action.subject_id,
             legitimacy_basis=action.legitimacy_basis,
