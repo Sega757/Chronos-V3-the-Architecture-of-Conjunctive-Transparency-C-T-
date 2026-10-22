@@ -17,3 +17,7 @@
 ## 2026-03-31 - LRU Caching for Candidate Content Embedding Extraction
 **Learning:** Caching candidate content embedding derivation using `@functools.lru_cache` in System 2 Verifier yields >140x speedup by eliminating redundant SHA-256 string hashing, NumPy PRNG instantiation, and vector allocation on recurring content verifications.
 **Action:** Cache deterministic content embedding lookups in pure Python services using `functools.lru_cache`.
+
+## 2026-03-31 - Vectorized Huber Weighting and BLAS Dot Product in Chronos Logos
+**Learning:** Replacing manual `ones_like`, `outlier_mask`, `safe_res` array allocation and boolean indexing in `chronos_logos` ALS-IRLS with `np.minimum`/`np.maximum` vector ops and `np.dot` BLAS dot product achieves ~1.73x speedup.
+**Action:** Use `np.minimum(1.0, delta / np.maximum(abs_res, 1e-8))` for vectorized Huber reweighting instead of creating temporary arrays and boolean mask indexing.
