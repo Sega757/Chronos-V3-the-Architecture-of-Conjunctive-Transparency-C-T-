@@ -21,3 +21,7 @@
 ## 2026-03-31 - Vectorized Huber Weighting and BLAS Dot Product in Chronos Logos
 **Learning:** Replacing manual `ones_like`, `outlier_mask`, `safe_res` array allocation and boolean indexing in `chronos_logos` ALS-IRLS with `np.minimum`/`np.maximum` vector ops and `np.dot` BLAS dot product achieves ~1.73x speedup.
 **Action:** Use `np.minimum(1.0, delta / np.maximum(abs_res, 1e-8))` for vectorized Huber reweighting instead of creating temporary arrays and boolean mask indexing.
+
+## 2026-03-31 - Ed25519 Public Key Precomputation & LRU Caching in Cryptography
+**Learning:** Pre-calculating `public_key_bytes` on `KeyPair` creation and caching `Ed25519PublicKey.from_public_bytes` via `@functools.lru_cache` eliminates redundant OpenSSL C object allocations during repeated signing and verification operations.
+**Action:** Always precompute static public key byte representations on key initialization and LRU cache byte-to-key-object parsers in cryptographic hot paths.
