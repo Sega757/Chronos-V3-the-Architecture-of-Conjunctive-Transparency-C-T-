@@ -25,3 +25,7 @@
 ## 2026-03-31 - Ed25519 Public Key Precomputation & LRU Caching in Cryptography
 **Learning:** Pre-calculating `public_key_bytes` on `KeyPair` creation and caching `Ed25519PublicKey.from_public_bytes` via `@functools.lru_cache` eliminates redundant OpenSSL C object allocations during repeated signing and verification operations.
 **Action:** Always precompute static public key byte representations on key initialization and LRU cache byte-to-key-object parsers in cryptographic hot paths.
+
+## 2026-03-31 - BLAS 1D Dot Product for Vector Normalization Sums in vMF Concentration
+**Learning:** Replacing 2D broadcasting matrix division `unit_vectors / norms` and `sum(axis=0)` with 1D inverse norm scaling `1.0 / safe_norms` and BLAS matrix-vector product `np.dot(inv_norms, unit_vectors)` speeds up von Mises-Fisher concentration calculation by ~1.56x by avoiding intermediate 2D array allocations.
+**Action:** Use 1D vector-matrix `np.dot(inv_weights, matrix)` for sum of weighted/normalized rows rather than 2D array division broadcasting and axis reduction.
