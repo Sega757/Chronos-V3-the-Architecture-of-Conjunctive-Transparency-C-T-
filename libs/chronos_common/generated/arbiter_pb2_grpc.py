@@ -5,7 +5,7 @@ import warnings
 
 import arbiter_pb2 as arbiter__pb2
 
-GRPC_GENERATED_VERSION = '1.84.0'
+GRPC_GENERATED_VERSION = '1.84.1'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 

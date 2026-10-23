@@ -129,6 +129,12 @@ class MetaArbiterServicer(arbiter_pb2_grpc.MetaArbiterServicer):
         if not request.HasField("signature") or not request.signature.signature:
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, "sample signature is required")
 
+        if (
+            request.signature.signer_id
+            and request.signature.signer_id != request.arbiter_node_id
+        ):
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, "signature signer_id does not match arbiter_node_id")
+
         payload = {
             "round_id": request.round_id,
             "arbiter_node_id": request.arbiter_node_id,
