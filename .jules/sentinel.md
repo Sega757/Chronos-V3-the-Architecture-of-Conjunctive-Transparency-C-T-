@@ -19,3 +19,8 @@
 **Vulnerability:** System 2 (verifier) verified Ed25519 signatures on `HypothesisCandidate` payloads without verifying that `sig.signer_id` matched `candidate.provenance.origin_node_id`.
 **Learning:** Signature verification confirms cryptographic key ownership over a payload digest, but does not guarantee authorization or provenance unless the signature's claimed `signer_id` is validated against the payload's declared `origin_node_id`.
 **Prevention:** Always assert that `sig.signer_id == origin_node_id` at service boundaries when verifying cryptographic provenance.
+
+## 2026-10-18 - Arbiter Node Identity Spoofing via Unmatched Signer ID in SubmitSample
+**Vulnerability:** System 0 (MetaArbiter) verified Ed25519 signatures on `ConsensusSample` payloads without checking that `request.signature.signer_id` matched `request.arbiter_node_id`.
+**Learning:** In consensus voting, verifying key signature over a payload containing a target `arbiter_node_id` allows any valid signing key to impersonate another node unless the signature's claimed `signer_id` is explicitly matched to the voting `arbiter_node_id`.
+**Prevention:** Always check `request.signature.signer_id == request.arbiter_node_id` when processing signed consensus votes.

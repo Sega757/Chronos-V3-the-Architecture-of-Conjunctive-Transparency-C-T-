@@ -128,6 +128,40 @@ def test_submit_sample_missing_signature():
     assert "sample signature is required" in ctx.details
 
 
+def test_submit_sample_mismatched_signer_id():
+    servicer, engine = _create_servicer()
+    engine.open_round("round-1", "cand-1", contested_grounded=True, escalation_reason="test")
+
+    attacker_keypair = KeyPair.generate("attacker-node")
+    signer = Ed25519Signer(attacker_keypair)
+    payload = {
+        "round_id": "round-1",
+        "arbiter_node_id": "victim-node",
+        "vote_grounded": True,
+        "stake_collateral": 10.0,
+    }
+    signed = signer.sign(payload)
+
+    sample_request = arbiter_pb2.ConsensusSample(
+        round_id="round-1",
+        arbiter_node_id="victim-node",
+        vote_grounded=True,
+        stake_collateral=10.0,
+        signature=common_pb2.Signature(
+            signer_id="attacker-node",
+            public_key=signed.public_key,
+            signature=signed.signature,
+        ),
+    )
+
+    ctx = MockContext()
+    with pytest.raises(grpc.RpcError):
+        servicer.SubmitSample(sample_request, ctx)
+
+    assert ctx.code == grpc.StatusCode.INVALID_ARGUMENT
+    assert "signature signer_id does not match arbiter_node_id" in ctx.details
+
+
 def test_escalate_valid_signature():
     servicer, _ = _create_servicer(timeout_seconds=0.01)
 
