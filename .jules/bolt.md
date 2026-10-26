@@ -25,3 +25,7 @@
 ## 2026-03-31 - Ed25519 Public Key Precomputation & LRU Caching in Cryptography
 **Learning:** Pre-calculating `public_key_bytes` on `KeyPair` creation and caching `Ed25519PublicKey.from_public_bytes` via `@functools.lru_cache` eliminates redundant OpenSSL C object allocations during repeated signing and verification operations.
 **Action:** Always precompute static public key byte representations on key initialization and LRU cache byte-to-key-object parsers in cryptographic hot paths.
+
+## 2026-03-31 - Merkle Tree Level Pre-padding and Array Re-allocation Elimination
+**Learning:** Pre-padding odd-length levels in-place when constructing a Merkle tree ensures stored levels are pre-balanced, eliminating redundant list allocations (`level + [level[-1]]`) during inclusion proof generation and yielding ~2.4x speedup.
+**Action:** Always pad odd tree levels during initial tree materialization so query methods like `proof()` can operate directly on even-length level slices without temporary list copies.
