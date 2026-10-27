@@ -172,6 +172,28 @@ def test_verify_one_mismatched_signer_id():
         servicer._verify_one(request)
 
 
+def test_verify_one_empty_signer_id():
+    keypair = KeyPair.generate("attacker-node")
+    verifier_keypair = KeyPair.generate("system2-node")
+    servicer = ChronosVerifierServicer(
+        store=InMemoryGroundTruthStore(),
+        signer=Ed25519Signer(verifier_keypair),
+        node_id="system2-node",
+    )
+
+    candidate = _create_signed_candidate(keypair, candidate_id="cand-empty-signer")
+    candidate.provenance.origin_node_id = "legitimate-node"
+    candidate.provenance.signatures[0].signer_id = ""
+
+    request = system2_verifier_pb2.VerificationRequest(
+        candidate=candidate,
+        ground_truth_refs=["ref-1"],
+    )
+
+    with pytest.raises(InvalidRequestError, match="signature signer_id does not match origin_node_id"):
+        servicer._verify_one(request)
+
+
 def test_batch_verify_invalid_signature():
     keypair = KeyPair.generate("system1-node")
     verifier_keypair = KeyPair.generate("system2-node")
