@@ -24,3 +24,8 @@
 **Vulnerability:** System 0 (MetaArbiter) verified Ed25519 signatures on `ConsensusSample` payloads without checking that `request.signature.signer_id` matched `request.arbiter_node_id`.
 **Learning:** In consensus voting, verifying key signature over a payload containing a target `arbiter_node_id` allows any valid signing key to impersonate another node unless the signature's claimed `signer_id` is explicitly matched to the voting `arbiter_node_id`.
 **Prevention:** Always check `request.signature.signer_id == request.arbiter_node_id` when processing signed consensus votes.
+
+## 2026-10-19 - Identity Verification Bypass via Empty Signer ID Guard
+**Vulnerability:** Services guarded signature identity checks with `if sig.signer_id and ...`, allowing callers to omit `signer_id` (`""`) and bypass node identity checks completely while submitting valid signatures signed by arbitrary keypairs.
+**Learning:** Using truthiness guards (`if string_field and ...`) on optional/default string fields in identity checks creates a bypass whenever the field is empty or unset.
+**Prevention:** Avoid truthiness guards on identity fields; always directly enforce equality between the payload signature's claimed `signer_id` and the declared node ID (`sig.signer_id == target_node_id`).
