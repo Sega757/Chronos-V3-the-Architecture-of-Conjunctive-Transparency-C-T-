@@ -49,14 +49,18 @@ def vmf_concentration(unit_vectors: np.ndarray) -> float:
         raise ValueError("vmf_concentration: expected a non-empty (n, p) array")
     n, p = unit_vectors.shape
     norms = np.linalg.norm(unit_vectors, axis=1, keepdims=True)
-    norms = np.where(norms < _EPS, 1.0, norms)
+    # Optimization: Avoid np.where array allocation when substituting sub-epsilon norms with 1.0
+    norms[norms < _EPS] = 1.0
     normalized = unit_vectors / norms
     resultant = normalized.sum(axis=0)
     r_bar = float(np.linalg.norm(resultant) / n)
     r_bar = min(r_bar, 1.0 - 1e-9)
     if r_bar < _EPS:
         return 0.0
-    kappa = r_bar * (p - r_bar**2) / (1 - r_bar**2)
+    # Optimization: Pre-calculate r_bar_sq with scalar multiplication instead of
+    # repeating expensive float exponentiation r_bar**2.
+    r_bar_sq = r_bar * r_bar
+    kappa = r_bar * (p - r_bar_sq) / (1.0 - r_bar_sq)
     return float(kappa)
 
 
