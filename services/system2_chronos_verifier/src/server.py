@@ -114,11 +114,7 @@ class ChronosVerifierServicer(system2_verifier_pb2_grpc.ChronosVerifierServicer)
             raise InvalidRequestError("candidate signature is required")
 
         sig = candidate.provenance.signatures[0]
-        if (
-            sig.signer_id
-            and candidate.provenance.origin_node_id
-            and sig.signer_id != candidate.provenance.origin_node_id
-        ):
+        if sig.signer_id != candidate.provenance.origin_node_id:
             raise InvalidRequestError("signature signer_id does not match origin_node_id")
 
         payload = {

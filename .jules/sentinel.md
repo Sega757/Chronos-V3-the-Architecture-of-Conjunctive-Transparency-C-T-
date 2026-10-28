@@ -24,3 +24,8 @@
 **Vulnerability:** System 0 (MetaArbiter) verified Ed25519 signatures on `ConsensusSample` payloads without checking that `request.signature.signer_id` matched `request.arbiter_node_id`.
 **Learning:** In consensus voting, verifying key signature over a payload containing a target `arbiter_node_id` allows any valid signing key to impersonate another node unless the signature's claimed `signer_id` is explicitly matched to the voting `arbiter_node_id`.
 **Prevention:** Always check `request.signature.signer_id == request.arbiter_node_id` when processing signed consensus votes.
+
+## 2026-10-19 - Identity Verification Bypass via Empty Proto String Fields
+**Vulnerability:** `if sig.signer_id and sig.signer_id != target_node_id:` skipped identity assertion when `sig.signer_id` was empty (`""`), allowing unsigned or empty `signer_id` signatures to bypass node identity checks.
+**Learning:** Checking the truthiness of string fields in Protobuf before performing inequality assertions introduces security bypasses whenever empty string `""` is a falsy default value.
+**Prevention:** Never guard identity checks with `if signer_id:`. Always perform direct equality/inequality comparison `if signer_id != target_id:`.
