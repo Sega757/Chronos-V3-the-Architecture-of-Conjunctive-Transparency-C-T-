@@ -29,3 +29,7 @@
 ## 2026-03-31 - Merkle Tree Level Pre-padding and Array Re-allocation Elimination
 **Learning:** Pre-padding odd-length levels in-place when constructing a Merkle tree ensures stored levels are pre-balanced, eliminating redundant list allocations (`level + [level[-1]]`) during inclusion proof generation and yielding ~2.4x speedup.
 **Action:** Always pad odd tree levels during initial tree materialization so query methods like `proof()` can operate directly on even-length level slices without temporary list copies.
+
+## 2026-03-31 - Fast Row-Wise L2 Norm and BLAS Dot Product for vMF Concentration
+**Learning:** `np.sqrt((arr * arr).sum(axis=1, keepdims=True))` and `math.sqrt(np.dot(vec, vec))` avoid `np.linalg.norm` C dispatcher and matrix attribute inspection overhead, yielding ~1.24x speedup for von Mises-Fisher concentration parameter estimations.
+**Action:** Use sum-of-squares row-wise sums for 2D matrix norms and `math.sqrt(np.dot(v, v))` for 1D vector L2 norms instead of `np.linalg.norm` in high-frequency calculations.
