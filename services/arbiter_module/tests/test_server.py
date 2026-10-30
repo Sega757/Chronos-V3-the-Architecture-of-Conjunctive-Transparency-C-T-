@@ -296,6 +296,44 @@ def test_escalate_missing_signature():
     assert "contested_result verifier signature is required" in ctx.details
 
 
+def test_escalate_empty_signer_id():
+    servicer, _ = _create_servicer(timeout_seconds=0.01)
+
+    verifier_keypair = KeyPair.generate("verifier-node")
+    signer = Ed25519Signer(verifier_keypair)
+    payload = {
+        "candidate_id": "cand-123",
+        "verdict": "ESCALATED",
+        "huber_residual": 1.2,
+        "rationale": "High Feeling-of-Conflict",
+    }
+    signed = signer.sign(payload)
+
+    contested = system2_verifier_pb2.VerificationResult(
+        candidate_id="cand-123",
+        verdict=system2_verifier_pb2.VERIFICATION_VERDICT_ESCALATED,
+        huber_residual=1.2,
+        rationale="High Feeling-of-Conflict",
+        verifier_signature=common_pb2.Signature(
+            signer_id="",
+            public_key=signed.public_key,
+            signature=signed.signature,
+        ),
+    )
+
+    request = arbiter_pb2.EscalationRequest(
+        contested_result=contested,
+        escalation_reason="high conflict",
+    )
+
+    ctx = MockContext()
+    with pytest.raises(grpc.RpcError):
+        servicer.Escalate(request, ctx)
+
+    assert ctx.code == grpc.StatusCode.INVALID_ARGUMENT
+    assert "verifier_signature.signer_id must be non-empty" in ctx.details
+
+
 def test_get_governance_action_valid_subject():
     servicer, _ = _create_servicer()
     req = arbiter_pb2.GovernanceQuery(subject_id="node-123")
