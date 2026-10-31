@@ -75,6 +75,9 @@ class MetaArbiterServicer(arbiter_pb2_grpc.MetaArbiterServicer):
         if not contested.HasField("verifier_signature") or not contested.verifier_signature.signature:
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, "contested_result verifier signature is required")
 
+        if not contested.verifier_signature.signer_id:
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, "verifier_signature.signer_id must be non-empty")
+
         verdict_str = _VERDICT_PROTO_TO_STR.get(contested.verdict, "")
         payload = {
             "candidate_id": contested.candidate_id,
