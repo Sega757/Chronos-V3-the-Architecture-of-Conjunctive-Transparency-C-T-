@@ -29,3 +29,8 @@
 **Vulnerability:** `if sig.signer_id and sig.signer_id != target_node_id:` skipped identity assertion when `sig.signer_id` was empty (`""`), allowing unsigned or empty `signer_id` signatures to bypass node identity checks.
 **Learning:** Checking the truthiness of string fields in Protobuf before performing inequality assertions introduces security bypasses whenever empty string `""` is a falsy default value.
 **Prevention:** Never guard identity checks with `if signer_id:`. Always perform direct equality/inequality comparison `if signer_id != target_id:`.
+
+## 2026-11-03 - Unrestricted Verification Verdict Escalation to PoSP Arbitration
+**Vulnerability:** System 0 (MetaArbiter) accepted `EscalationRequest` containing arbitrary `VerificationResult` verdicts (such as `GROUNDED` or `REJECTED`) instead of strictly requiring `VERIFICATION_VERDICT_ESCALATED`.
+**Learning:** Without checking boundary payload state preconditions (such as verdict state), arbitrary valid signatures on finalized verdicts can be leveraged to re-open consensus rounds, potentially overturning deterministic verifier verdicts and triggering collateral slashing.
+**Prevention:** Enforce domain-level invariant validation at the service entrypoint (e.g. `contested.verdict == VERIFICATION_VERDICT_ESCALATED`) in addition to cryptographic signature validation.
