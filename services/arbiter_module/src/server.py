@@ -78,6 +78,16 @@ class MetaArbiterServicer(arbiter_pb2_grpc.MetaArbiterServicer):
         if not contested.verifier_signature.signer_id:
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, "verifier_signature.signer_id must be non-empty")
 
+        # Security/Boundary enforcement: System 0 arbitration is strictly designated for
+        # resolving ESCALATED verdicts (where Feeling-of-Conflict was too high for System 2
+        # to decide deterministically). Unilateral GROUNDED or REJECTED results cannot be
+        # escalated to avoid bypassing the zero-hallucination lock or causing arbitrary stake slashing.
+        if contested.verdict != system2_verifier_pb2.VERIFICATION_VERDICT_ESCALATED:
+            context.abort(
+                grpc.StatusCode.INVALID_ARGUMENT,
+                "only contested results with VERIFICATION_VERDICT_ESCALATED may be escalated",
+            )
+
         verdict_str = _VERDICT_PROTO_TO_STR.get(contested.verdict, "")
         payload = {
             "candidate_id": contested.candidate_id,

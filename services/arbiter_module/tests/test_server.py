@@ -334,6 +334,44 @@ def test_escalate_empty_signer_id():
     assert "verifier_signature.signer_id must be non-empty" in ctx.details
 
 
+def test_escalate_non_escalated_verdict_rejected():
+    servicer, _ = _create_servicer(timeout_seconds=0.01)
+
+    verifier_keypair = KeyPair.generate("verifier-node")
+    signer = Ed25519Signer(verifier_keypair)
+    payload = {
+        "candidate_id": "cand-grounded",
+        "verdict": "GROUNDED",
+        "huber_residual": 0.1,
+        "rationale": "Grounded",
+    }
+    signed = signer.sign(payload)
+
+    contested = system2_verifier_pb2.VerificationResult(
+        candidate_id="cand-grounded",
+        verdict=system2_verifier_pb2.VERIFICATION_VERDICT_GROUNDED,
+        huber_residual=0.1,
+        rationale="Grounded",
+        verifier_signature=common_pb2.Signature(
+            signer_id=signed.signer_id,
+            public_key=signed.public_key,
+            signature=signed.signature,
+        ),
+    )
+
+    request = arbiter_pb2.EscalationRequest(
+        contested_result=contested,
+        escalation_reason="attempting to contest grounded verdict",
+    )
+
+    ctx = MockContext()
+    with pytest.raises(grpc.RpcError):
+        servicer.Escalate(request, ctx)
+
+    assert ctx.code == grpc.StatusCode.INVALID_ARGUMENT
+    assert "only contested results with VERIFICATION_VERDICT_ESCALATED may be escalated" in ctx.details
+
+
 def test_get_governance_action_valid_subject():
     servicer, _ = _create_servicer()
     req = arbiter_pb2.GovernanceQuery(subject_id="node-123")
