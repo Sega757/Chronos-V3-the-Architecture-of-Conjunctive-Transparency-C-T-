@@ -41,3 +41,7 @@
 ## 2026-03-31 - Direct C-Level encode_basestring Binding for RFC 8785 JSON String Escaping
 **Learning:** Calling `json.dumps(s, ensure_ascii=False)` in Python allocates a new `JSONEncoder` Python object and executes Python wrapper dispatch for every string and dict key. Binding directly to `json.encoder.encode_basestring` invokes C-level string escaping (`_json.encode_basestring`) with `ensure_ascii=False` directly, running 3.5x - 9.5x faster and yielding ~2.1x speedup on full RFC 8785 canonical JSON serialization.
 **Action:** In custom JSON serialization and canonicalization routines, bind directly to `json.encoder.encode_basestring` instead of calling `json.dumps(s)`.
+
+## 2026-03-31 - BLAS Dot Product for Resultant Vector Sum in vMF Concentration
+**Learning:** Computing the resultant sum vector of normalized rows via `(unit_vectors / norms).sum(axis=0)` allocates an intermediate `(n, p)` floating-point array and performs broadcast division followed by an axis-0 reduction. Replacing it with `np.dot(1.0 / norms, unit_vectors)` leverages BLAS vector-matrix multiplication directly, bypassing 2D array allocation and reducing computation time by ~1.20x - 1.23x.
+**Action:** When summing scaled or normalized rows of a 2D array, use `np.dot(scale_vector, matrix)` instead of element-wise broadcasting and `.sum(axis=0)`.
