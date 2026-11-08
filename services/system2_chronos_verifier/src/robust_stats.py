@@ -117,12 +117,16 @@ def candidate_huber_residual(
     reference_embeddings: list[np.ndarray],
     *,
     delta: float = DEFAULT_DELTA,
+    estimate: RobustEstimate | None = None,
 ) -> float:
     """Robust residual of a candidate against the converged reference
     estimate: the (delta-scaled) distance of the candidate from the
     robust center, in units of the robust scale, passed through the Huber
     loss so a small number of near-misses cost little but a large
     deviation is penalized (near-)linearly rather than quadratically."""
-    estimate = als_irls_estimate(reference_embeddings, delta=delta)
+    # Optimization: Accept precomputed estimate when multiple candidates share
+    # reference embeddings, bypassing redundant ALS-IRLS convergence loops.
+    if estimate is None:
+        estimate = als_irls_estimate(reference_embeddings, delta=delta)
     normalized_distance = float(np.linalg.norm(candidate_embedding - estimate.location) / max(estimate.scale, _EPS))
     return huber_loss(normalized_distance, delta=delta)
