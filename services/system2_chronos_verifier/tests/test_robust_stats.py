@@ -52,3 +52,16 @@ def test_candidate_far_from_cluster_has_high_residual():
     far_candidate = np.array([50.0, 50.0])
     residual = candidate_huber_residual(far_candidate, refs)
     assert residual > 10.0
+
+
+def test_candidate_huber_residual_with_precomputed_estimate():
+    rng = np.random.default_rng(4)
+    true_mean = np.array([1.0, 2.0])
+    refs = [true_mean + rng.normal(scale=0.01, size=2) for _ in range(15)]
+    candidate = np.array([1.05, 1.95])
+
+    res_default = candidate_huber_residual(candidate, refs)
+    precomputed = als_irls_estimate(refs)
+    res_precomputed = candidate_huber_residual(candidate, refs, estimate=precomputed)
+
+    assert np.isclose(res_default, res_precomputed)

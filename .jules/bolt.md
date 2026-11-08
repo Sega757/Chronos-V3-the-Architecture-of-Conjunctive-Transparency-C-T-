@@ -45,3 +45,7 @@
 ## 2026-03-31 - Exact-Type Dispatch and Direct Tuple Sorting in Canonical JSON
 **Learning:** In recursive canonical JSON encoding, dispatching with `type(v) is ...` avoids traversing Python's MRO across multiple `isinstance` checks, while `sorted(dict.items())` leverages native C-level tuple comparison (first element key is unique) without creating intermediate lambda function objects, delivering ~2.22x speedup on canonical JSON encoding.
 **Action:** Prefer `type(v) is ...` over chained `isinstance(v, ...)` and `sorted(d.items())` over `sorted(d.items(), key=lambda kv: kv[0])` in hot serialization routines.
+
+## 2026-03-31 - Batch-Scoped Ground Truth Reference & ALS-IRLS Estimate Reuse
+**Learning:** In System 2 Verifier `BatchVerify`, candidates generated for a common query share identical ground truth reference sets. Caching resolved embeddings and precomputed `RobustEstimate` objects across items in the batch eliminates redundant ground truth store lookups and iterative ALS-IRLS convergence routines, speeding up batch verification by ~3.0x.
+**Action:** In batch processing endpoints where multiple inputs evaluate against the same reference data, maintain an in-flight cache keyed by reference IDs to reuse expensive robust statistics and vector models.

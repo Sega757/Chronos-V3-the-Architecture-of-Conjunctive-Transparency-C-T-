@@ -1,6 +1,7 @@
 import pytest
 import sys
 from pathlib import Path
+import numpy as np
 
 # Add generated stubs to sys.path
 repo_root = Path(__file__).resolve().parents[3]
@@ -247,3 +248,49 @@ def test_batch_verify_exceeds_max_batch_size():
 
     with pytest.raises(InvalidRequestError, match="batch size exceeds maximum limit of 128"):
         servicer.BatchVerify(batch_request, MockContext())
+
+
+def test_batch_verify_reused_ground_truth_estimates():
+    keypair = KeyPair.generate("system1-node")
+    verifier_keypair = KeyPair.generate("system2-node")
+    store = InMemoryGroundTruthStore()
+
+    candidate1 = _create_signed_candidate(keypair, candidate_id="cand-1", content="alpha")
+    candidate2 = _create_signed_candidate(keypair, candidate_id="cand-2", content="beta")
+
+    # Set up ground truth references in store
+    emb1 = ChronosVerifierServicer._extract_embedding(candidate1)
+    emb2 = ChronosVerifierServicer._extract_embedding(candidate2)
+    store.register("ref-shared-1", emb1)
+    store.register("ref-shared-2", emb2)
+
+    servicer = ChronosVerifierServicer(
+        store=store,
+        signer=Ed25519Signer(verifier_keypair),
+        node_id="system2-node",
+    )
+
+    req1 = system2_verifier_pb2.VerificationRequest(
+        candidate=candidate1,
+        ground_truth_refs=["ref-shared-1", "ref-shared-2"],
+    )
+    req2 = system2_verifier_pb2.VerificationRequest(
+        candidate=candidate2,
+        ground_truth_refs=["ref-shared-1", "ref-shared-2"],
+    )
+
+    batch_request = system2_verifier_pb2.BatchVerificationRequest(requests=[req1, req2])
+    batch_result = servicer.BatchVerify(batch_request, None)
+
+    # Check that individual _verify_one calls yield same results as batch
+    single_res1 = servicer._verify_one(req1)
+    single_res2 = servicer._verify_one(req2)
+
+    assert len(batch_result.results) == 2
+    assert batch_result.results[0].candidate_id == single_res1.candidate_id
+    assert batch_result.results[0].verdict == single_res1.verdict
+    assert np.isclose(batch_result.results[0].huber_residual, single_res1.huber_residual)
+    assert batch_result.results[1].candidate_id == single_res2.candidate_id
+    assert batch_result.results[1].verdict == single_res2.verdict
+    assert np.isclose(batch_result.results[1].huber_residual, single_res2.huber_residual)
+    assert len(batch_result.batch_merkle_root.digest) == 32
