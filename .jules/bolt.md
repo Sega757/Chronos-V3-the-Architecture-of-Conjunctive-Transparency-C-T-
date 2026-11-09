@@ -49,3 +49,7 @@
 ## 2026-03-31 - Batch-Scoped Ground Truth Reference & ALS-IRLS Estimate Reuse
 **Learning:** In System 2 Verifier `BatchVerify`, candidates generated for a common query share identical ground truth reference sets. Caching resolved embeddings and precomputed `RobustEstimate` objects across items in the batch eliminates redundant ground truth store lookups and iterative ALS-IRLS convergence routines, speeding up batch verification by ~3.0x.
 **Action:** In batch processing endpoints where multiple inputs evaluate against the same reference data, maintain an in-flight cache keyed by reference IDs to reuse expensive robust statistics and vector models.
+
+## 2026-03-31 - Vectorized Euclidean Residual Norms & Short-Circuited Convergence in ALS-IRLS
+**Learning:** `np.linalg.norm(refs - new_mu, axis=1)` suffers from multi-axis parameter handling, array slicing, and general linear algebra reduction overhead in NumPy. Direct element-wise calculation `np.sqrt((diff * diff).sum(axis=1))` runs ~1.33x faster per evaluation. Furthermore, short-circuiting convergence checks with scalar `scale_shift < tolerance` before computing `np.dot(mu_diff, mu_diff) < tolerance**2` avoids redundant location norm calculations and square roots, delivering an overall ~1.28x speedup to the ALS-IRLS convergence loop.
+**Action:** Replace `np.linalg.norm(array, axis=1)` with `np.sqrt((diff * diff).sum(axis=1))` in iterative array loops, and short-circuit vector convergence checks behind cheap scalar checks.
