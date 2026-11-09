@@ -195,6 +195,50 @@ def test_verify_one_empty_signer_id():
         servicer._verify_one(request)
 
 
+def test_verify_one_empty_origin_node_id_and_signer_id():
+    keypair = KeyPair.generate("")
+    verifier_keypair = KeyPair.generate("system2-node")
+    servicer = ChronosVerifierServicer(
+        store=InMemoryGroundTruthStore(),
+        signer=Ed25519Signer(verifier_keypair),
+        node_id="system2-node",
+    )
+
+    candidate = _create_signed_candidate(keypair, candidate_id="cand-anonymous")
+    candidate.provenance.origin_node_id = ""
+    candidate.provenance.signatures[0].signer_id = ""
+
+    request = system2_verifier_pb2.VerificationRequest(
+        candidate=candidate,
+        ground_truth_refs=["ref-1"],
+    )
+
+    with pytest.raises(InvalidRequestError, match="provenance.origin_node_id must be non-empty"):
+        servicer._verify_one(request)
+
+
+def test_verify_one_whitespace_origin_node_id():
+    keypair = KeyPair.generate("   ")
+    verifier_keypair = KeyPair.generate("system2-node")
+    servicer = ChronosVerifierServicer(
+        store=InMemoryGroundTruthStore(),
+        signer=Ed25519Signer(verifier_keypair),
+        node_id="system2-node",
+    )
+
+    candidate = _create_signed_candidate(keypair, candidate_id="cand-whitespace")
+    candidate.provenance.origin_node_id = "   "
+    candidate.provenance.signatures[0].signer_id = "   "
+
+    request = system2_verifier_pb2.VerificationRequest(
+        candidate=candidate,
+        ground_truth_refs=["ref-1"],
+    )
+
+    with pytest.raises(InvalidRequestError, match="provenance.origin_node_id must be non-empty"):
+        servicer._verify_one(request)
+
+
 def test_batch_verify_invalid_signature():
     keypair = KeyPair.generate("system1-node")
     verifier_keypair = KeyPair.generate("system2-node")

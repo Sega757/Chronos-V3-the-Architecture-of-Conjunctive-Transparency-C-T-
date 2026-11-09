@@ -34,3 +34,8 @@
 **Vulnerability:** System 0 (MetaArbiter) accepted `EscalationRequest` containing arbitrary `VerificationResult` verdicts (such as `GROUNDED` or `REJECTED`) instead of strictly requiring `VERIFICATION_VERDICT_ESCALATED`.
 **Learning:** Without checking boundary payload state preconditions (such as verdict state), arbitrary valid signatures on finalized verdicts can be leveraged to re-open consensus rounds, potentially overturning deterministic verifier verdicts and triggering collateral slashing.
 **Prevention:** Enforce domain-level invariant validation at the service entrypoint (e.g. `contested.verdict == VERIFICATION_VERDICT_ESCALATED`) in addition to cryptographic signature validation.
+
+## 2026-11-09 - Provenance Origin Node Identity Verification Bypass via Empty Proto Fields
+**Vulnerability:** System 2 (verifier) asserted `sig.signer_id != candidate.provenance.origin_node_id` without verifying that `origin_node_id` was non-empty. When both `candidate.provenance.origin_node_id` and `sig.signer_id` were empty (`""`), the equality check evaluated to `True` (`"" == ""`), allowing unauthenticated or anonymous candidates to bypass identity verification.
+**Learning:** Directly comparing two string fields without asserting that the reference identity is non-empty allows callers to bypass authentication by providing empty default Protobuf values for both fields.
+**Prevention:** Always assert that the declared entity identity (e.g., `origin_node_id`) is non-empty and non-whitespace before comparing against signature metadata at the service boundary.
