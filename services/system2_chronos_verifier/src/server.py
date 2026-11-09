@@ -122,6 +122,11 @@ class ChronosVerifierServicer(system2_verifier_pb2_grpc.ChronosVerifierServicer)
         if not candidate.provenance or not candidate.provenance.signatures:
             raise InvalidRequestError("candidate signature is required")
 
+        # Security/Boundary enforcement: Assert origin_node_id is non-empty to prevent
+        # anonymous verification bypass when both origin_node_id and sig.signer_id default to "".
+        if not candidate.provenance.origin_node_id or not candidate.provenance.origin_node_id.strip():
+            raise InvalidRequestError("provenance.origin_node_id must be non-empty")
+
         sig = candidate.provenance.signatures[0]
         if sig.signer_id != candidate.provenance.origin_node_id:
             raise InvalidRequestError("signature signer_id does not match origin_node_id")
