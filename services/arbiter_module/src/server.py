@@ -10,6 +10,7 @@ ConsensusEngine and returns a signed decision.
 from __future__ import annotations
 
 import logging
+import math
 import os
 import uuid
 from concurrent import futures
@@ -134,10 +135,10 @@ class MetaArbiterServicer(arbiter_pb2_grpc.MetaArbiterServicer):
         )
 
     def SubmitSample(self, request, context):
-        if not request.round_id or not request.arbiter_node_id:
+        if not request.round_id or not request.arbiter_node_id or not request.arbiter_node_id.strip():
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, "round_id and arbiter_node_id are required")
-        if request.stake_collateral <= 0:
-            context.abort(grpc.StatusCode.INVALID_ARGUMENT, "stake_collateral must be > 0")
+        if not math.isfinite(request.stake_collateral) or request.stake_collateral <= 0:
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, "stake_collateral must be a finite positive number")
 
         if not request.HasField("signature") or not request.signature.signature:
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, "sample signature is required")
