@@ -162,6 +162,63 @@ def test_submit_sample_mismatched_signer_id():
     assert "signature signer_id does not match arbiter_node_id" in ctx.details
 
 
+def test_submit_sample_nan_stake_collateral():
+    servicer, engine = _create_servicer()
+    engine.open_round("round-1", "cand-1", contested_grounded=True, escalation_reason="test")
+
+    sample_request = arbiter_pb2.ConsensusSample(
+        round_id="round-1",
+        arbiter_node_id="node-1",
+        vote_grounded=True,
+        stake_collateral=float("nan"),
+    )
+
+    ctx = MockContext()
+    with pytest.raises(grpc.RpcError):
+        servicer.SubmitSample(sample_request, ctx)
+
+    assert ctx.code == grpc.StatusCode.INVALID_ARGUMENT
+    assert "stake_collateral must be a finite positive number" in ctx.details
+
+
+def test_submit_sample_infinite_stake_collateral():
+    servicer, engine = _create_servicer()
+    engine.open_round("round-1", "cand-1", contested_grounded=True, escalation_reason="test")
+
+    sample_request = arbiter_pb2.ConsensusSample(
+        round_id="round-1",
+        arbiter_node_id="node-1",
+        vote_grounded=True,
+        stake_collateral=float("inf"),
+    )
+
+    ctx = MockContext()
+    with pytest.raises(grpc.RpcError):
+        servicer.SubmitSample(sample_request, ctx)
+
+    assert ctx.code == grpc.StatusCode.INVALID_ARGUMENT
+    assert "stake_collateral must be a finite positive number" in ctx.details
+
+
+def test_submit_sample_whitespace_arbiter_node_id():
+    servicer, engine = _create_servicer()
+    engine.open_round("round-1", "cand-1", contested_grounded=True, escalation_reason="test")
+
+    sample_request = arbiter_pb2.ConsensusSample(
+        round_id="round-1",
+        arbiter_node_id="   ",
+        vote_grounded=True,
+        stake_collateral=10.0,
+    )
+
+    ctx = MockContext()
+    with pytest.raises(grpc.RpcError):
+        servicer.SubmitSample(sample_request, ctx)
+
+    assert ctx.code == grpc.StatusCode.INVALID_ARGUMENT
+    assert "round_id and arbiter_node_id are required" in ctx.details
+
+
 def test_submit_sample_empty_signer_id():
     servicer, engine = _create_servicer()
     engine.open_round("round-1", "cand-1", contested_grounded=True, escalation_reason="test")

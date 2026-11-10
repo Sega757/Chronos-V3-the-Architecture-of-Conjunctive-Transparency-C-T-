@@ -39,3 +39,8 @@
 **Vulnerability:** System 2 (verifier) asserted `sig.signer_id != candidate.provenance.origin_node_id` without verifying that `origin_node_id` was non-empty. When both `candidate.provenance.origin_node_id` and `sig.signer_id` were empty (`""`), the equality check evaluated to `True` (`"" == ""`), allowing unauthenticated or anonymous candidates to bypass identity verification.
 **Learning:** Directly comparing two string fields without asserting that the reference identity is non-empty allows callers to bypass authentication by providing empty default Protobuf values for both fields.
 **Prevention:** Always assert that the declared entity identity (e.g., `origin_node_id`) is non-empty and non-whitespace before comparing against signature metadata at the service boundary.
+
+## 2026-11-10 - NaN / Non-Finite Stake Collateral Consensus Manipulation
+**Vulnerability:** System 0 (MetaArbiter) accepted `ConsensusSample` payloads with `NaN` or infinite float values in `stake_collateral` because `request.stake_collateral <= 0` evaluates to `False` for `float('nan')`.
+**Learning:** IEEE 754 floating-point comparisons (`<= 0`) fail silently for NaN values. Propagating NaN into stake aggregation and decisiveness calculations corrupts the Nash equilibrium score and consensus resolution.
+**Prevention:** Always check `math.isfinite()` on numeric inputs representing financial or voting stakes at service boundaries.
